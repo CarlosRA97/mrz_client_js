@@ -604,7 +604,7 @@ function validateCheckDigit(str) {
     return sum % 10 === 0;
 }
 
-function simulateTyping(inputElement, text) {
+function simulateTyping(inputElement, text, simulateEnter = false) {
     inputElement.value = text;
 
     const inputEvent = new Event("input", { bubbles: true });
@@ -612,6 +612,18 @@ function simulateTyping(inputElement, text) {
 
     const changeEvent = new Event("change", { bubbles: true });
     inputElement.dispatchEvent(changeEvent);
+
+    // Simulate Enter key press if required
+    if (simulateEnter) {
+        const enterEvent = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true
+        });
+        inputElement.dispatchEvent(enterEvent);
+    }
 
     console.log(`Texto simulado en "${inputElement}": "${text}"`);
 }
@@ -662,8 +674,8 @@ function writeToFields(
     simulateTyping(apellidosInput, surname);
     simulateTyping(apellidos2Input, surname2 == null ? "" : surname2);
     simulateTyping(nameInput, name);
-    simulateTyping(nationalityInput, nationality);
-    simulateTyping(countryInput, countryCode);
+    simulateTyping(nationalityInput, nationality, true);
+    simulateTyping(countryInput, countryCode, true);
     simulateTyping(issueDateInput, issueDate);
     simulateTyping(birthDateInput, birthDate);
     simulateTyping(sexInput, sex);
