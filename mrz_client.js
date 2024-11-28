@@ -82,6 +82,7 @@ const countryListAlpha3 = {
     "GMB": "Gambia",
     "GEO": "Georgia",
     "DEU": "Alemania",
+    "D": "Alemania",
     "GHA": "Ghana",
     "GIB": "Gibraltar",
     "GRC": "Grecia",
@@ -313,15 +314,12 @@ function getPassportValidityYears(countryCode, birthDate, expiryDate) {
 function parseMRZ(mrzString) {
     mrzString = mrzString.replaceAll(";", "<");
     mrzString = mrzString.replace(/\s/g, "");
-    // 2. Detectar el tipo de MRZ
-    let mrzType = getMRZType(mrzString);
 
-    // 1. Normalizar la cadena MRZ
-    // mrzString = mrzString.replace(/\s/g, '');
     console.log(mrzString);
-
-    // 3. Extraer los campos usando expresiones regulares
+    // Continuar con el procesamiento normal para otros formatos
+    let mrzType = getMRZType(mrzString);
     let data = {};
+    
     switch (mrzType) {
         case "TD1":
             data = parseMRZWithRegex(mrzString, TD1_REGEX);
@@ -336,15 +334,12 @@ function parseMRZ(mrzString) {
             throw new Error("Tipo de MRZ no válido");
     }
 
-    // 4. Validar los campos (checksum, fechas, etc.)
-
-    // 5. Devolver los datos extraídos
     return data;
 }
 
 // Expresiones regulares para cada tipo de MRZ (obtenidas de Doubango)
 const TD1_REGEX =
-    /([A|C|I][A-Z0-9<]{1})([A-Z]{3})([A-Z0-9<]{9})([0-9<]{1})([A-Z0-9<]{15})([0-9]{6})([0-9]{1})([M|F|X|<]{1})([0-9]{6})([0-9]{1})([A-Z]{3})([A-Z0-9<]{11})([0-9]{1})([A-Z0-9<]{30})/;
+    /([A|C|I][A-Z0-9<]{1})([A-Z<]{3})([A-Z0-9<]{9})([0-9<]{1})([A-Z0-9<]{15})([0-9]{6})([0-9]{1})([M|F|X|<]{1})([0-9]{6})([0-9]{1})([A-Z<]{3})([A-Z0-9<]{11})([0-9]{1})([A-Z0-9<]{30})/;
 const TD2_REGEX =
     /([A|C|I][A-Z0-9<]{1})([A-Z]{3})([A-Z0-9<]{31})([A-Z0-9<]{9})([0-9]{1})([A-Z]{3})([0-9]{6})([0-9]{1})([M|F|X|<]{1})([0-9]{6})([0-9]{1})([A-Z0-9<]{7})([0-9]{1})/;
 const TD3_REGEX =
@@ -409,7 +404,7 @@ function TD1Spanish(match, data) {
         match[2],
         data.birthDate,
     );
-    data.nationality = countryListAlpha3[match[11]];
+    data.nationality = countryListAlpha3[match[11].replace(/</g, "")];
     const surname = match[14].split("<<")[0].replace(/</g, " ").trim();
     const lastSpaceIndex = surname.lastIndexOf(" ");
     data.surname = surname.substring(0, lastSpaceIndex).trim();
@@ -430,7 +425,7 @@ function TD1Belgian(match, data) {
         match[2],
         data.birthDate,
     );
-    data.nationality = countryListAlpha3[match[11]];
+    data.nationality = countryListAlpha3[match[11].replace(/</g, "")];
 
     // Belgian specific name parsing
     const nameParts = match[14].split("<<").filter((part) => part !== "");
@@ -450,19 +445,18 @@ function TD1Data(match, data) {
             break;
         default:
             data.documentType = "I";
-            data.optionalData1 = match[5].replace(/</g, "");
+            data.documentNumber = match[3].replace(/</g, "");
             data.birthDate = mrzDateToStandardDate(match[6], true);
             data.sex = match[8];
+            data.nationality = countryListAlpha3[match[11].replace(/</g, "")];
             data.issueDate = mrzExpireDateToIssueDateStandard(
                 match[9],
                 match[2],
                 data.birthDate,
             );
-            data.nationality = countryListAlpha3[match[11]];
-            data.optionalData2 = match[12].replace(/</g, "");
-            data.compositeCheckDigit = match[13];
-            data.surname = match[14].split("<<")[0].replace(/</g, " ");
-            data.name = match[14].split("<<")[1].replace(/</g, " ");
+            const nameParts = match[14].split("<<").filter((part) => part !== "");
+            data.surname = nameParts[0].replace(/</g, " ").trim();
+            data.name = nameParts.slice(1).join(" ").replace(/</g, " ").trim();
     }
     return data;
 }
@@ -530,7 +524,7 @@ function parseMRZWithRegex(mrzString, regex) {
 
         // Asignar los grupos capturados a las propiedades del objeto data
         data.documentType = match[1].replace(/</g, "");
-        data.countryCode = match[2];
+        data.countryCode = match[2].replace(/</g, "");
         data.documentNumber = match[3].replace(/</g, "");
 
         if (regex === TD1_REGEX) {
@@ -678,7 +672,7 @@ function writeToFields(
     simulateTyping(countryInput, countryCode, true);
     simulateTyping(issueDateInput, issueDate);
     simulateTyping(birthDateInput, birthDate);
-    simulateTyping(sexInput, sex);
+    if (sex != null && (sex != "X" || sex != "<")) simulateTyping(sexInput, sex);
 }
 
 function waitForElement(selector, callback) {
@@ -736,3 +730,4 @@ function setup() {
         }
     });
 }
+
